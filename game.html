@@ -335,7 +335,7 @@
                 x: player.x,
                 y: player.y,
                 size: 6, 
-                color: '#f54444',
+                color: '#f54444', 
                 column: player.column,
             };
             bullets.push(newBullet);
@@ -488,6 +488,37 @@
             gameRunning = true;
             gameLoop();
         }
+        
+        let touchStartX = 0;
+        const SWIPE_THRESHOLD = 50; 
+
+        canvas.addEventListener('touchstart', (e) => {
+            if (e.touches.length === 1) {
+                touchStartX = e.touches[0].clientX;
+            }
+        }, { passive: false });
+
+        canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault(); 
+        }, { passive: false });
+
+        canvas.addEventListener('touchend', (e) => {
+            if (!gameRunning) return;
+
+            if (e.changedTouches.length === 1) {
+                const touchEndX = e.changedTouches[0].clientX;
+                const deltaX = touchEndX - touchStartX;
+
+                if (Math.abs(deltaX) > SWIPE_THRESHOLD) {
+                    if (deltaX < 0) {
+                        movePlayer(-1);
+                    } else {
+                        movePlayer(1);
+                    }
+                }
+            }
+        });
+
 
         const btnLeft = document.getElementById('btn-left');
         const btnRight = document.getElementById('btn-right');
@@ -531,6 +562,4 @@
         });
     </script>
 </body>
-
 </html>
-
