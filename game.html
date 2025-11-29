@@ -208,13 +208,13 @@
         const btnStart = document.getElementById('btn-start');
 
         const COLUMN_COUNT = 5;
-        // Tighter speeds
+        // Speeds: High speeds require fewer updates to look fluid.
         const BULLET_SPEED = 7;
         const ENEMY_SPEED = 2;
         const MAX_ENEMIES = 5;
-        // --- PERFORMANCE OPTIMIZATION: Reduce object spawning/creation rate ---
-        const ENEMY_SPAWN_INTERVAL = 150; // Increased from 100 to 150 frames (fewer enemies)
-        const BULLET_COOLDOWN = 20; // Increased from 15 to 20 frames (fewer bullets)
+        // Spawning: Reduced frequency to lower object count.
+        const ENEMY_SPAWN_INTERVAL = 150; 
+        const BULLET_COOLDOWN = 20; 
 
         let COL_WIDTH;
 
@@ -256,21 +256,34 @@
 
         let bullets = [];
         let enemies = [];
+        // NEW: Map to store enemies indexed by their column for O(1) lookups
+        let enemiesByColumn = {};
 
         function getXForColumn(column) {
             return (column * COL_WIDTH) + (COL_WIDTH / 2);
         }
 
-        function getColumnForX(x) {
-            return Math.floor(x / COL_WIDTH);
-        }
-
         function updatePlayerPosition() {
             player.x = getXForColumn(player.column);
         }
+        
+        // Helper function to rebuild the map used for efficient collision checks
+        function updateEnemiesByColumnMap() {
+            enemiesByColumn = {};
+            for (let i = 0; i < COLUMN_COUNT; i++) {
+                enemiesByColumn[i] = [];
+            }
+            
+            enemies.forEach(enemy => {
+                // Ensure column exists (it should, as spawnEnemy limits it)
+                if (enemiesByColumn[enemy.column]) {
+                    enemiesByColumn[enemy.column].push(enemy);
+                }
+            });
+        }
 
         function drawGrid() {
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)'; // Very faint lines
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)'; 
             ctx.lineWidth = 1;
 
             ctx.beginPath();
@@ -334,6 +347,8 @@
                     decreaseHealth(); 
                 }
             }
+            // IMPORTANT: Rebuild map after enemies have been updated/removed
+            updateEnemiesByColumnMap();
         }
 
         function drawEnemies() {
@@ -380,35 +395,48 @@
                 ctx.fillRect(bullet.x - halfSize, bullet.y - halfSize, bullet.size, bullet.size);
             });
         }
-
+        
+        // *** PERFORMANCE OPTIMIZATION: Refactored Collision Detection ***
         function checkCollisions() {
+            let bulletsToRemove = new Set();
+            let enemiesToRemove = new Set();
+            let enemiesInColumn;
+            
+            // 1. Bullet vs Enemy Collisions (Optimized)
             for (let b = 0; b < bullets.length; b++) {
-                for (let e = 0; e < enemies.length; e++) {
-                    const bullet = bullets[b];
-                    const enemy = enemies[e];
+                const bullet = bullets[b];
+                
+                // --- SPATIAL PARTITIONING: Only check enemies in the same column ---
+                enemiesInColumn = enemiesByColumn[bullet.column] || [];
 
-                    const isSameColumn = bullet.column === enemy.column;
-                    
+                for (let e = 0; e < enemiesInColumn.length; e++) {
+                    const enemy = enemiesInColumn[e];
+
+                    // Check Y-axis collision
                     const isYOverlap = (
                         bullet.y - bullet.size/2 < enemy.y + enemy.height &&
                         bullet.y + bullet.size/2 > enemy.y
                     );
 
-                    if (isSameColumn && isYOverlap) {
-                        bullets.splice(b, 1);
-                        b--;
-                        enemies.splice(e, 1);
-                        e--;
+                    if (isYOverlap) {
+                        // Mark both for removal
+                        bulletsToRemove.add(bullet);
+                        enemiesToRemove.add(enemy);
                         score += 10;
                         updateScore();
-                        break;
+                        // Bullet is destroyed, break inner loop and move to next bullet
+                        break; 
                     }
                 }
             }
-
+            
+            // 2. Remove marked objects
+            bullets = bullets.filter(bullet => !bulletsToRemove.has(bullet));
+            enemies = enemies.filter(enemy => !enemiesToRemove.has(enemy));
+            
+            // 3. Player vs Enemy Collisions (Simple iteration, as MAX_ENEMIES is low)
             for (let i = 0; i < enemies.length; i++) {
                 const enemy = enemies[i];
-
                 const isSameColumn = player.column === enemy.column;
 
                 const playerTop = player.y;
@@ -426,6 +454,9 @@
                     return;
                 }
             }
+            
+            // Must rebuild the map after filtering both lists!
+            updateEnemiesByColumnMap();
         }
 
         function updateScore() {
@@ -451,6 +482,7 @@
             health = 3;
             bullets = [];
             enemies = [];
+            enemiesByColumn = {}; // Reset map
             
             player.column = 2; 
             player.y = canvas.height - player.height - 20; 
@@ -476,27 +508,22 @@
         function gameLoop() {
             if (!gameRunning) return;
 
-            // Fire bullet happens early so it's ready for the next frame
             fireBullet();
 
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             
-            // Draw grid first (purely aesthetic/visual aid)
             drawGrid();
 
-            // 1. Update positions
             updateBullets();
-            updateEnemies();
+            updateEnemies(); // Will update enemiesByColumn map
             
-            // 2. Spawn logic
             if (frameCount % ENEMY_SPAWN_INTERVAL === 0) {
                 spawnEnemy();
             }
 
-            // 3. Collision checks (CPU heavy)
+            // High performance collision check
             checkCollisions();
 
-            // 4. Drawing (GPU heavy)
             drawPlayer();
             drawBullets();
             drawEnemies();
@@ -538,10 +565,8 @@
 
                 if (Math.abs(deltaX) > SWIPE_THRESHOLD) {
                     if (deltaX < 0) {
-                        // Swipe Left
                         movePlayer(-1);
                     } else {
-                        // Swipe Right
                         movePlayer(1);
                     }
                 }
