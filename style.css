@@ -30,8 +30,6 @@ p {
     overflow: hidden;
 }
 
-/* --- Main Structure & Layout --- */
-
 .left-sidebar {
     width: 25%; 
     position: fixed;
@@ -45,8 +43,8 @@ p {
     border-right: 1px solid rgba(255, 255, 255, 0.1);
     transform: translateX(-100%); 
     transition: transform 0.7s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-    scrollbar-width: thin; /* For Firefox */
-    scrollbar-color: rgba(255,255,255,0.3) transparent; /* For Firefox */
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255,255,255,0.3) transparent;
 }
 
 .left-sidebar::-webkit-scrollbar {
@@ -1392,4 +1390,5 @@ footer{
     .form-intro-text {
         margin-top: 2rem; 
     }
+
 }
