@@ -208,11 +208,13 @@
         const btnStart = document.getElementById('btn-start');
 
         const COLUMN_COUNT = 5;
+        // Tighter speeds
         const BULLET_SPEED = 7;
         const ENEMY_SPEED = 2;
         const MAX_ENEMIES = 5;
-        const ENEMY_SPAWN_INTERVAL = 100;
-        const BULLET_COOLDOWN = 15;
+        // --- PERFORMANCE OPTIMIZATION: Reduce object spawning/creation rate ---
+        const ENEMY_SPAWN_INTERVAL = 150; // Increased from 100 to 150 frames (fewer enemies)
+        const BULLET_COOLDOWN = 20; // Increased from 15 to 20 frames (fewer bullets)
 
         let COL_WIDTH;
 
@@ -265,6 +267,19 @@
 
         function updatePlayerPosition() {
             player.x = getXForColumn(player.column);
+        }
+
+        function drawGrid() {
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)'; // Very faint lines
+            ctx.lineWidth = 1;
+
+            ctx.beginPath();
+            for (let i = 1; i < COLUMN_COUNT; i++) {
+                const x = i * COL_WIDTH;
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, canvas.height);
+            }
+            ctx.stroke();
         }
 
         function drawPlayer() {
@@ -335,7 +350,7 @@
                 x: player.x,
                 y: player.y,
                 size: 6, 
-                color: '#f54444', 
+                color: '#f54444',
                 column: player.column,
             };
             bullets.push(newBullet);
@@ -461,19 +476,27 @@
         function gameLoop() {
             if (!gameRunning) return;
 
+            // Fire bullet happens early so it's ready for the next frame
             fireBullet();
 
             ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw grid first (purely aesthetic/visual aid)
+            drawGrid();
 
+            // 1. Update positions
             updateBullets();
             updateEnemies();
             
+            // 2. Spawn logic
             if (frameCount % ENEMY_SPAWN_INTERVAL === 0) {
                 spawnEnemy();
             }
 
+            // 3. Collision checks (CPU heavy)
             checkCollisions();
 
+            // 4. Drawing (GPU heavy)
             drawPlayer();
             drawBullets();
             drawEnemies();
@@ -489,6 +512,10 @@
             gameLoop();
         }
         
+        // ------------------------------------------------------------------
+        // SWIPE GESTURE LOGIC
+        // ------------------------------------------------------------------
+
         let touchStartX = 0;
         const SWIPE_THRESHOLD = 50; 
 
@@ -511,14 +538,20 @@
 
                 if (Math.abs(deltaX) > SWIPE_THRESHOLD) {
                     if (deltaX < 0) {
+                        // Swipe Left
                         movePlayer(-1);
                     } else {
+                        // Swipe Right
                         movePlayer(1);
                     }
                 }
             }
         });
 
+
+        // ------------------------------------------------------------------
+        // Existing Event Handlers (Buttons and Keyboard)
+        // ------------------------------------------------------------------
 
         const btnLeft = document.getElementById('btn-left');
         const btnRight = document.getElementById('btn-right');
