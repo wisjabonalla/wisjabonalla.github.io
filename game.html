@@ -210,13 +210,14 @@
         const COLUMN_COUNT = 5;
         // Speeds: High speeds require fewer updates to look fluid.
         const BULLET_SPEED = 7;
-        const ENEMY_SPEED = 2;
+        const ENEMY_SPEED_BASE = 2; // Base speed moved outside the loop
         const MAX_ENEMIES = 5;
         // Spawning: Reduced frequency to lower object count.
         const ENEMY_SPAWN_INTERVAL = 150; 
         const BULLET_COOLDOWN = 20; 
 
         let COL_WIDTH;
+        let currentEnemySpeed; // New variable for pre-calculated speed
 
         function setCanvasSize() {
             const container = document.getElementById('game-container');
@@ -256,8 +257,6 @@
 
         let bullets = [];
         let enemies = [];
-        // NEW: Map to store enemies indexed by their column for O(1) lookups
-        let enemiesByColumn = {};
 
         function getXForColumn(column) {
             return (column * COL_WIDTH) + (COL_WIDTH / 2);
@@ -267,20 +266,7 @@
             player.x = getXForColumn(player.column);
         }
         
-        // Helper function to rebuild the map used for efficient collision checks
-        function updateEnemiesByColumnMap() {
-            enemiesByColumn = {};
-            for (let i = 0; i < COLUMN_COUNT; i++) {
-                enemiesByColumn[i] = [];
-            }
-            
-            enemies.forEach(enemy => {
-                // Ensure column exists (it should, as spawnEnemy limits it)
-                if (enemiesByColumn[enemy.column]) {
-                    enemiesByColumn[enemy.column].push(enemy);
-                }
-            });
-        }
+        // Removed: updateEnemiesByColumnMap - No longer needed due to optimized collision check
 
         function drawGrid() {
             ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)'; 
@@ -337,18 +323,17 @@
         }
 
         function updateEnemies() {
-            for (let i = 0; i < enemies.length; i++) {
+            // Use reverse loop to remove elements safely and in-place
+            for (let i = enemies.length - 1; i >= 0; i--) {
                 let enemy = enemies[i];
-                enemy.y += ENEMY_SPEED + (score / 500);
+                // Use pre-calculated speed for efficiency
+                enemy.y += currentEnemySpeed;
 
                 if (enemy.y > player.y + player.height) {
-                    enemies.splice(i, 1);
-                    i--;
+                    enemies.splice(i, 1); // In-place removal
                     decreaseHealth(); 
                 }
             }
-            // IMPORTANT: Rebuild map after enemies have been updated/removed
-            updateEnemiesByColumnMap();
         }
 
         function drawEnemies() {
@@ -373,13 +358,13 @@
         }
 
         function updateBullets() {
-            for (let i = 0; i < bullets.length; i++) {
+            // Use reverse loop to remove elements safely and in-place
+            for (let i = bullets.length - 1; i >= 0; i--) {
                 let bullet = bullets[i];
                 bullet.y -= BULLET_SPEED;
 
                 if (bullet.y < 0) {
-                    bullets.splice(i, 1);
-                    i--;
+                    bullets.splice(i, 1); // In-place removal
                 }
             }
 
@@ -387,7 +372,7 @@
                 bulletCooldownCounter--;
             }
         }
-
+        
         function drawBullets() {
             ctx.fillStyle = '#f54444';
             bullets.forEach(bullet => {
@@ -396,21 +381,27 @@
             });
         }
         
-        // *** PERFORMANCE OPTIMIZATION: Refactored Collision Detection ***
+        // *** ULTIMATE PERFORMANCE OPTIMIZATION: In-place splice with reverse loops ***
         function checkCollisions() {
-            let bulletsToRemove = new Set();
-            let enemiesToRemove = new Set();
-            let enemiesInColumn;
-            
-            // 1. Bullet vs Enemy Collisions (Optimized)
-            for (let b = 0; b < bullets.length; b++) {
-                const bullet = bullets[b];
-                
-                // --- SPATIAL PARTITIONING: Only check enemies in the same column ---
-                enemiesInColumn = enemiesByColumn[bullet.column] || [];
+            const playerTop = player.y;
+            const playerBottom = player.y + player.height;
+            const playerColumn = player.column;
 
-                for (let e = 0; e < enemiesInColumn.length; e++) {
-                    const enemy = enemiesInColumn[e];
+            // 1. Bullet vs Enemy Collisions (Reverse loops for no GC/array creation)
+            // Loop through bullets backwards (allows safe splicing)
+            for (let b = bullets.length - 1; b >= 0; b--) {
+                const bullet = bullets[b];
+                const bulletColumn = bullet.column;
+                let bulletHit = false;
+                
+                // Loop through enemies backwards (allows safe splicing)
+                for (let e = enemies.length - 1; e >= 0; e--) {
+                    const enemy = enemies[e];
+
+                    // Spatial Partitioning check (inline)
+                    if (enemy.column !== bulletColumn) {
+                        continue; // Skip enemies in other columns
+                    }
 
                     // Check Y-axis collision
                     const isYOverlap = (
@@ -419,28 +410,25 @@
                     );
 
                     if (isYOverlap) {
-                        // Mark both for removal
-                        bulletsToRemove.add(bullet);
-                        enemiesToRemove.add(enemy);
+                        // Enemy is hit: remove enemy and mark bullet for removal
+                        enemies.splice(e, 1); 
                         score += 10;
                         updateScore();
-                        // Bullet is destroyed, break inner loop and move to next bullet
-                        break; 
+                        bulletHit = true;
+                        break; // Bullet is destroyed, move to the next bullet
                     }
                 }
-            }
-            
-            // 2. Remove marked objects
-            bullets = bullets.filter(bullet => !bulletsToRemove.has(bullet));
-            enemies = enemies.filter(enemy => !enemiesToRemove.has(enemy));
-            
-            // 3. Player vs Enemy Collisions (Simple iteration, as MAX_ENEMIES is low)
-            for (let i = 0; i < enemies.length; i++) {
-                const enemy = enemies[i];
-                const isSameColumn = player.column === enemy.column;
 
-                const playerTop = player.y;
-                const playerBottom = player.y + player.height;
+                if (bulletHit) {
+                    bullets.splice(b, 1); // Remove bullet
+                }
+            }
+
+            // 2. Player vs Enemy Collisions 
+            for (let i = enemies.length - 1; i >= 0; i--) {
+                const enemy = enemies[i];
+
+                const isSameColumn = playerColumn === enemy.column;
                 const enemyBottom = enemy.y + enemy.height;
                 
                 const isPlayerHit = (
@@ -450,13 +438,11 @@
                 );
 
                 if (isPlayerHit) {
+                    // Critical damage, game over.
                     gameOver();
-                    return;
+                    return; 
                 }
             }
-            
-            // Must rebuild the map after filtering both lists!
-            updateEnemiesByColumnMap();
         }
 
         function updateScore() {
@@ -482,7 +468,6 @@
             health = 3;
             bullets = [];
             enemies = [];
-            enemiesByColumn = {}; // Reset map
             
             player.column = 2; 
             player.y = canvas.height - player.height - 20; 
@@ -508,20 +493,23 @@
         function gameLoop() {
             if (!gameRunning) return;
 
+            // --- Optimization: Pre-calculate enemy speed once per frame ---
+            currentEnemySpeed = ENEMY_SPEED_BASE + (score / 500);
+
             fireBullet();
 
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             
             drawGrid();
 
+            // All updates and checks now use efficient in-place array manipulation
             updateBullets();
-            updateEnemies(); // Will update enemiesByColumn map
+            updateEnemies();
             
             if (frameCount % ENEMY_SPAWN_INTERVAL === 0) {
                 spawnEnemy();
             }
 
-            // High performance collision check
             checkCollisions();
 
             drawPlayer();
