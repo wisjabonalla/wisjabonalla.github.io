@@ -1359,6 +1359,7 @@ footer{
     }
     .text-huge {
         font-size: 10vw;
+        letter-spacing: 0; 
     }
     .text-name {
         font-size: 6rem;
@@ -1418,3 +1419,4 @@ footer{
         font-size: .8rem;
     }
 }
+
