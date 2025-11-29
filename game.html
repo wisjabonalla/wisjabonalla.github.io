@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arcade Space Shooter (Grid)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
+
+        :root {
+            --game-width: 320px;
+            --game-height: 500px;
+        }
+
+        body {
+            background-color: #101010; 
+            color: #e0e0e0;
+            font-family: 'VT323', monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 1rem;
+            box-sizing: border-box;
+        }
+
+        #game-container {
+            border: 4px solid #d33a3a; 
+            box-shadow: 0 0 20px rgba(255, 0, 0, 0.5);
+            background-color: #000000;
+            border-radius: 8px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            max-width: var(--game-width);
+            width: 100%;
+            margin-bottom: 1rem;
+            position: relative; 
+        }
+
+        #game-canvas {
+            background: radial-gradient(circle, #0a0a1f 0%, #000000 100%);
+            display: block;
+            width: 100%;
+            height: var(--game-height);
+        }
+        
+        #controls {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            margin-top: 1rem;
+            width: 100%;
+            max-width: var(--game-width);
+        }
+
+        .control-btn {
+            flex-grow: 1;
+            padding: 0.75rem 1rem;
+            font-size: 1.5rem;
+            font-weight: bold;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.1s ease;
+            background-color: #b33131;
+            box-shadow: 0 4px #e74040;
+            user-select: none;
+            touch-action: manipulation;
+        }
+
+        .control-btn:active {
+            box-shadow: 0 2px #d33a3a;
+            transform: translateY(2px);
+        }
+        
+        #btn-left, #btn-right {
+            background-color: #b33131; 
+            color: white;
+            border: 2px solid #e74040;
+        }
+
+        #info-bar {
+            background-color: #371f1f;
+            padding: 0.5rem;
+            border-radius: 5px 5px 0 0;
+            display: flex;
+            justify-content: space-between;
+            font-size: 1.25rem;
+        }
+
+        #game-over-modal, #start-screen-modal {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.85);
+            display: none; 
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+        }
+        
+        #start-screen-modal {
+            display: flex; 
+        }
+
+        #modal-content, #start-modal-content {
+            background-color: #111827;
+            border: 4px solid #ef4444;
+            padding: 2rem;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 0 30px rgba(239, 68, 68, 0.7);
+        }
+        
+        #start-modal-content {
+            border-color: #ff0000;
+            box-shadow: 0 0 30px rgba(255, 0, 0, 0.7);
+        }
+    </style>
+</head>
+<body>
+
+    <div id="game-container">
+        <div id="info-bar">
+            <span>Score: <span id="score-display">0</span></span>
+            <span>Health: <span id="health-display">3</span></span>
+        </div>
+        <canvas id="game-canvas"></canvas>
+        
+        <div id="start-screen-modal">
+            <div id="start-modal-content">
+                <h2 class="text-4xl text-[#d33a3a] mb-4 font-bold">ARCADE SHOOTER</h2>
+                <p class="text-lg text-gray-300 mb-6">Defend your column! Shoot enemies before they pass.</p>
+                <p class="text-sm text-gray-400 mb-6">Use LEFT/RIGHT buttons or A/D keys to move.</p>
+                <button id="btn-start" class="control-btn">
+                    START GAME
+                </button>
+            </div>
+        </div>
+
+        <div id="game-over-modal">
+            <div id="modal-content">
+                <h2 class="text-4xl text-red-500 mb-4">GAME OVER!</h2>
+                <p class="text-xl mb-6">Final Score: <span id="final-score">0</span></p>
+                <button id="btn-restart" class="control-btn">
+                    Restart Game
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="controls">
+        <button id="btn-left" class="control-btn" aria-label="Move Left">
+            &larr; LEFT
+        </button>
+        <button id="btn-right" class="control-btn" aria-label="Move Right">
+            RIGHT &rarr;
+        </button>
+    </div>
+
+<script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        
+        let db, auth;
+        let userId;
+
+        if (firebaseConfig) {
+            try {
+                const app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+                setLogLevel('Debug');
+
+                async function authenticate() {
+                    if (initialAuthToken) {
+                        await signInWithCustomToken(auth, initialAuthToken);
+                    } else {
+                        await signInAnonymously(auth);
+                    }
+                    userId = auth.currentUser?.uid || crypto.randomUUID();
+                    console.log("Firebase initialized. User ID:", userId);
+                }
+                authenticate();
+            } catch (error) {
+                console.error("Firebase initialization failed:", error);
+            }
+        }
+
+        const canvas = document.getElementById('game-canvas');
+        const ctx = canvas.getContext('2d');
+        const scoreDisplay = document.getElementById('score-display');
+        const healthDisplay = document.getElementById('health-display');
+        const gameOverModal = document.getElementById('game-over-modal');
+        const startScreenModal = document.getElementById('start-screen-modal');
+        const finalScoreDisplay = document.getElementById('final-score');
+        const btnRestart = document.getElementById('btn-restart');
+        const btnStart = document.getElementById('btn-start');
+
+        const COLUMN_COUNT = 5;
+        const BULLET_SPEED = 4;
+        const ENEMY_SPEED = 1;
+        const MAX_ENEMIES = 5;
+        const ENEMY_SPAWN_INTERVAL = 100;
+        const BULLET_COOLDOWN = 15;
+
+        let COL_WIDTH;
+
+        function setCanvasSize() {
+            const container = document.getElementById('game-container');
+            const style = getComputedStyle(document.documentElement);
+            const height = parseInt(style.getPropertyValue('--game-height'), 10);
+            
+            canvas.width = container.clientWidth;
+            canvas.height = height;
+            
+            COL_WIDTH = canvas.width / COLUMN_COUNT;
+            
+            if (player.column !== undefined) {
+                updatePlayerPosition();
+            }
+        }
+
+        window.addEventListener('resize', setCanvasSize);
+        window.onload = function() {
+            setCanvasSize();
+        }
+
+
+        let gameRunning = false;
+        let score = 0;
+        let health = 3;
+        let frameCount = 0;
+        let bulletCooldownCounter = 0;
+
+        let player = {
+            x: 0, 
+            y: 0, 
+            width: 30,
+            height: 30,
+            color: '#f54444',
+            column: 2,
+        };
+
+        let bullets = [];
+        let enemies = [];
+
+        function getXForColumn(column) {
+            return (column * COL_WIDTH) + (COL_WIDTH / 2);
+        }
+
+        function getColumnForX(x) {
+            return Math.floor(x / COL_WIDTH);
+        }
+
+        function updatePlayerPosition() {
+            player.x = getXForColumn(player.column);
+        }
+
+        function drawPlayer() {
+            ctx.fillStyle = player.color;
+            ctx.beginPath();
+            ctx.moveTo(player.x, player.y);
+            ctx.lineTo(player.x - player.width / 2, player.y + player.height);
+            ctx.lineTo(player.x + player.width / 2, player.y + player.height);
+            ctx.closePath();
+            ctx.fill();
+        }
+
+        function movePlayer(direction) {
+            if (!gameRunning) return;
+
+            let newColumn = player.column + direction;
+
+            if (newColumn >= 0 && newColumn < COLUMN_COUNT) {
+                player.column = newColumn;
+                updatePlayerPosition();
+            }
+        }
+
+        function spawnEnemy() {
+            if (enemies.length >= MAX_ENEMIES) return;
+
+            const enemyWidth = 20;
+            const enemyHeight = 20;
+            
+            const spawnColumn = Math.floor(Math.random() * COLUMN_COUNT);
+            const spawnX = getXForColumn(spawnColumn);
+
+            let newEnemy = {
+                x: spawnX, 
+                y: -enemyHeight,
+                width: enemyWidth,
+                height: enemyHeight,
+                column: spawnColumn,
+                color: '#ff4500',
+            };
+            enemies.push(newEnemy);
+        }
+
+        function updateEnemies() {
+            for (let i = 0; i < enemies.length; i++) {
+                let enemy = enemies[i];
+                enemy.y += ENEMY_SPEED + (score / 500);
+
+                if (enemy.y > player.y + player.height) {
+                    enemies.splice(i, 1);
+                    i--;
+                    decreaseHealth(); 
+                }
+            }
+        }
+
+        function drawEnemies() {
+            ctx.fillStyle = '#ff007f';
+            enemies.forEach(enemy => {
+                ctx.fillRect(enemy.x - enemy.width / 2, enemy.y, enemy.width, enemy.height);
+                ctx.fillStyle = '#ffcc00'; 
+                ctx.beginPath();
+                ctx.arc(enemy.x, enemy.y + enemy.height / 3, enemy.width / 4, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#ff007f';
+            });
+        }
+
+        function fireBullet() {
+            if (bulletCooldownCounter > 0) return;
+
+            let newBullet = {
+                x: player.x,
+                y: player.y,
+                radius: 3,
+                color: '#f54444',
+                column: player.column,
+            };
+            bullets.push(newBullet);
+            bulletCooldownCounter = BULLET_COOLDOWN;
+        }
+
+        function updateBullets() {
+            for (let i = 0; i < bullets.length; i++) {
+                let bullet = bullets[i];
+                bullet.y -= BULLET_SPEED;
+
+                if (bullet.y < 0) {
+                    bullets.splice(i, 1);
+                    i--;
+                }
+            }
+
+            if (bulletCooldownCounter > 0) {
+                bulletCooldownCounter--;
+            }
+        }
+
+        function drawBullets() {
+            ctx.fillStyle = '#f54444';
+            bullets.forEach(bullet => {
+                ctx.beginPath();
+                ctx.arc(bullet.x, bullet.y, bullet.radius, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
+
+        function checkCollisions() {
+            for (let b = 0; b < bullets.length; b++) {
+                for (let e = 0; e < enemies.length; e++) {
+                    const bullet = bullets[b];
+                    const enemy = enemies[e];
+
+                    const isSameColumn = bullet.column === enemy.column;
+                    
+                    const isYOverlap = (
+                        bullet.y < enemy.y + enemy.height &&
+                        bullet.y > enemy.y
+                    );
+
+                    if (isSameColumn && isYOverlap) {
+                        bullets.splice(b, 1);
+                        b--;
+                        enemies.splice(e, 1);
+                        e--;
+                        score += 10;
+                        updateScore();
+                        break;
+                    }
+                }
+            }
+
+            for (let i = 0; i < enemies.length; i++) {
+                const enemy = enemies[i];
+
+                const isSameColumn = player.column === enemy.column;
+
+                const playerTop = player.y;
+                const playerBottom = player.y + player.height;
+                const enemyBottom = enemy.y + enemy.height;
+                
+                const isPlayerHit = (
+                    isSameColumn &&
+                    enemyBottom > playerTop &&
+                    enemy.y < playerBottom 
+                );
+
+                if (isPlayerHit) {
+                    gameOver();
+                    return;
+                }
+            }
+        }
+
+        function updateScore() {
+            scoreDisplay.textContent = score;
+        }
+
+        function updateHealth() {
+            healthDisplay.textContent = health;
+            if (health <= 0) {
+                gameOver();
+            }
+        }
+
+        function decreaseHealth() {
+            health--;
+            updateHealth();
+        }
+
+        function resetGame() {
+            setCanvasSize(); 
+            
+            score = 0;
+            health = 3;
+            bullets = [];
+            enemies = [];
+            
+            player.column = 2; 
+            player.y = canvas.height - player.height - 20; 
+            updatePlayerPosition();
+            
+            frameCount = 0;
+            bulletCooldownCounter = 0;
+            updateScore();
+            updateHealth();
+            
+            gameOverModal.style.display = 'none';
+            startScreenModal.style.display = 'none';
+            
+            gameRunning = true;
+        }
+        
+        function gameOver() {
+            gameRunning = false;
+            finalScoreDisplay.textContent = score;
+            gameOverModal.style.display = 'flex';
+        }
+
+        function gameLoop() {
+            if (!gameRunning) return;
+
+            fireBullet();
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            updateBullets();
+            updateEnemies();
+            
+            if (frameCount % ENEMY_SPAWN_INTERVAL === 0) {
+                spawnEnemy();
+            }
+
+            checkCollisions();
+
+            drawPlayer();
+            drawBullets();
+            drawEnemies();
+
+            frameCount++;
+            requestAnimationFrame(gameLoop);
+        }
+
+        function startGame() {
+            if (gameRunning) return;
+            resetGame();
+            gameRunning = true;
+            gameLoop();
+        }
+
+        const btnLeft = document.getElementById('btn-left');
+        const btnRight = document.getElementById('btn-right');
+
+        const handleLeft = () => movePlayer(-1);
+        const handleRight = () => movePlayer(1);
+        
+        btnLeft.addEventListener('click', handleLeft);
+        btnLeft.addEventListener('touchend', (e) => { 
+            e.preventDefault();
+            handleLeft(); 
+        });
+
+        btnRight.addEventListener('click', handleRight);
+        btnRight.addEventListener('touchend', (e) => { 
+            e.preventDefault(); 
+            handleRight(); 
+        });
+
+        btnRestart.addEventListener('click', startGame);
+        btnStart.addEventListener('click', startGame);
+
+        document.addEventListener('keydown', (e) => {
+            if (!gameRunning) {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    startGame();
+                }
+                return;
+            }
+            
+            if (e.repeat) return; 
+
+            if (e.key === 'ArrowLeft' || e.key.toLowerCase() === 'a') {
+                e.preventDefault();
+                handleLeft();
+            } else if (e.key === 'ArrowRight' || e.key.toLowerCase() === 'd') {
+                e.preventDefault();
+                handleRight();
+            } 
+        });
+    </script>
+</body>
+</html>
