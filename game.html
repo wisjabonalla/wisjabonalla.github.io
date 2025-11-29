@@ -322,14 +322,9 @@
         }
 
         function drawEnemies() {
-            ctx.fillStyle = '#ff007f';
+            ctx.fillStyle = '#ff007f'; 
             enemies.forEach(enemy => {
                 ctx.fillRect(enemy.x - enemy.width / 2, enemy.y, enemy.width, enemy.height);
-                ctx.fillStyle = '#ffcc00'; 
-                ctx.beginPath();
-                ctx.arc(enemy.x, enemy.y + enemy.height / 3, enemy.width / 4, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.fillStyle = '#ff007f';
             });
         }
 
@@ -339,7 +334,7 @@
             let newBullet = {
                 x: player.x,
                 y: player.y,
-                radius: 3,
+                size: 6, 
                 color: '#f54444',
                 column: player.column,
             };
@@ -366,9 +361,8 @@
         function drawBullets() {
             ctx.fillStyle = '#f54444';
             bullets.forEach(bullet => {
-                ctx.beginPath();
-                ctx.arc(bullet.x, bullet.y, bullet.radius, 0, Math.PI * 2);
-                ctx.fill();
+                const halfSize = bullet.size / 2;
+                ctx.fillRect(bullet.x - halfSize, bullet.y - halfSize, bullet.size, bullet.size);
             });
         }
 
@@ -381,8 +375,8 @@
                     const isSameColumn = bullet.column === enemy.column;
                     
                     const isYOverlap = (
-                        bullet.y < enemy.y + enemy.height &&
-                        bullet.y > enemy.y
+                        bullet.y - bullet.size/2 < enemy.y + enemy.height &&
+                        bullet.y + bullet.size/2 > enemy.y
                     );
 
                     if (isSameColumn && isYOverlap) {
@@ -539,3 +533,4 @@
 </body>
 
 </html>
+
