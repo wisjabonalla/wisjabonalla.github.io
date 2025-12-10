@@ -27,7 +27,7 @@ function startCounter(counterElement, targetValue, duration) {
         const counterElementWebsite = document.getElementById('website-counter'); 
         
         const targetValueProjects = 10; 
-        const targetValueWebsite = 2; 
+        const targetValueWebsite = 3; 
         
         const observerOptions = {
             root: null, 
@@ -57,3 +57,4 @@ function startCounter(counterElement, targetValue, duration) {
             observer.observe(counterElementWebsite);
         }
     });
+
