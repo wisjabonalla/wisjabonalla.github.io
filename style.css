@@ -81,7 +81,7 @@ p {
 .vertical-text {
     position: absolute;
     top: 50%; 
-    right: -15.5rem; 
+    right: -14rem; 
     transform: translateY(100%) rotate(-90deg); 
     width: auto; 
     font-size: 1rem;
@@ -1420,5 +1420,6 @@ footer{
         font-size: .8rem;
     }
 }
+
 
 
