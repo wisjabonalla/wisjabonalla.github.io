@@ -2,7 +2,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const filterButtons = document.querySelectorAll('.filter-btn');
     const portfolioItems = document.querySelectorAll('.portfolio-item-wrapper');
-
     filterButtons.forEach(button => {
         button.addEventListener('click', (event) => {
             const filter = event.target.dataset.filter;
@@ -24,8 +23,10 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
     });
-
+    
     const imageModalElement = document.getElementById('imageModal');
+    const modalDialog = imageModalElement.querySelector('.modal-dialog'); 
+    const modalContent = imageModalElement.querySelector('.modal-content'); 
     const modalBody = imageModalElement.querySelector('.modal-body'); 
     
     if (imageModalElement) {
@@ -41,16 +42,21 @@ document.addEventListener('DOMContentLoaded', () => {
             const workType = portfolioItem ? portfolioItem.querySelector('.work-type').textContent : '';
             const category = portfolioItemWrapper ? portfolioItemWrapper.dataset.category : '';
 
-            const modalTitle = imageModalElement.querySelector('#imageModalLabel');
-            modalTitle.textContent = `${projectTitle}`;
-
             modalBody.innerHTML = '';
             
-           if (workType === 'VIDEO EDITING' && videoSrc) {
-                modalBody.classList.add('px-3', 'row', 'justify-content-center');
+            const closeButton = document.createElement('button');
+            closeButton.type = 'button';
+            closeButton.classList.add('btn-close', 'btn-close-white', 'close-button-overlay');
+            closeButton.setAttribute('data-bs-dismiss', 'modal');
+            closeButton.setAttribute('aria-label', 'Close');
+            modalContent.appendChild(closeButton);
+
+            if (workType === 'VIDEO EDITING' && videoSrc) {
+                modalBody.classList.remove('p-0'); 
+                modalBody.classList.add('p-3', 'row', 'justify-content-center');
 
                 const videoCol = document.createElement('div');
-                videoCol.classList.add('col-12', 'col-md-10'); 
+                videoCol.classList.add('col-12', 'col-md-10', 'm-auto'); 
                 
                 videoCol.innerHTML = `
                     <div class="ratio ratio-16x9">
@@ -62,27 +68,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 `;
                 modalBody.appendChild(videoCol);
 
-            }
-            else if (imageSrc) {
-                modalBody.classList.remove('p-3', 'row', 'g-3', 'align-items-center', 'justify-content-center'); // Also remove justify-content-center
-                modalBody.classList.add('pb-5'); 
+            } else if (imageSrc) {
+                modalBody.classList.add('p-0', 'd-flex', 'justify-content-center', 'align-items-center');
 
                 const modalImageViewer = document.createElement('img');
                 modalImageViewer.id = 'modal-image-viewer';
                 modalImageViewer.src = imageSrc;
                 modalImageViewer.alt = 'Project Design';
                 
-                modalImageViewer.style.width = '100%';
+                modalImageViewer.style.maxWidth = '100%';
+                modalImageViewer.style.maxHeight = '100vh';
+                modalImageViewer.style.width = 'auto';
                 modalImageViewer.style.height = 'auto';
                 modalImageViewer.style.display = 'block';
-
-                if (category === 'multimedia') {
-                    modalImageViewer.style.maxWidth = '60%';
-                    modalImageViewer.style.margin = '0 auto';
-                } else {
-                    modalImageViewer.style.maxWidth = '100%';
-                    modalImageViewer.style.margin = '0';
-                }
+                modalImageViewer.style.objectFit = 'contain';
                 modalBody.appendChild(modalImageViewer);
                 
             } else {
@@ -93,8 +92,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         imageModalElement.addEventListener('hidden.bs.modal', () => {
             modalBody.innerHTML = '';
-            modalBody.classList.remove('p-3', 'row', 'g-3', 'align-items-center', 'justify-content-center'); // Also reset justify-content-center
-            modalBody.classList.add('pb-5');
+            const closeButton = modalContent.querySelector('.close-button-overlay');
+            if(closeButton) {
+                closeButton.remove();
+            }
+            modalBody.classList.add('p-0', 'd-flex', 'justify-content-center', 'align-items-center');
+            modalBody.classList.remove('p-3', 'row'); 
         });
     }
 });
