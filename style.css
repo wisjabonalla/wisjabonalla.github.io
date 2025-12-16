@@ -1086,36 +1086,15 @@ p {
     margin-top: 1rem;
 }
 
-.bg-dark-custom {
-    background-color: var(--color-dark);
-}
-
 .modal-header .btn-close-white {
     filter: invert(1) grayscale(100%) brightness(200%); 
 }
 
-.modal-body{
-    scrollbar-width: thin; 
-    scrollbar-color: rgba(255,255,255,0.3) transparent; 
-}
-
-.modal-body::-webkit-scrollbar {
-    width: 8px;
-}
-
-.modal-body::-webkit-scrollbar-track {
-    background: transparent; 
-}
-
-.modal-body::-webkit-scrollbar-thumb {
-    background-color: rgba(255,255,255,0.3);
-    border-radius: 4px;
-    border: 2px solid transparent;
-    background-clip: content-box;
-}
-
-.modal-body::-webkit-scrollbar-thumb:hover {
-    background-color: rgba(255,255,255,0.5);
+#imageModal .close-button-overlay {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    z-index: 1051;
 }
 
 .filter-bar {
@@ -1420,6 +1399,7 @@ footer{
         font-size: .8rem;
     }
 }
+
 
 
 
