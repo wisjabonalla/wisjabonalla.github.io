@@ -1246,15 +1246,11 @@
     </div>
 </div>
 
-<div class="modal fade" id="imageModal" tabindex="-1" aria-labelledby="imageModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content bg-dark-custom">
-            <div class="modal-header border-bottom-0 px-4">
-                <span class="modal-title section-title-large text-accent-red" id="imageModalLabel">Project Details</span>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body pb-5 ">
-                <img id="modal-image-viewer" src="" alt="Project Design" style="width: 100%; height: auto; display: block;">
+<div class="modal fade" id="imageModal" tabindex="-1" aria-labelledby="imageModalLabel" aria-hidden="true" data-bs-backdrop="true">
+    <div class="modal-dialog modal-xl modal-fullscreen">
+        <div class="modal-content border-0 bg-transparent">
+            <div class="modal-body p-0 d-flex justify-content-center align-items-center">
+                <img id="modal-image-viewer" src="" alt="Project Design" style="width: 100%; height: auto; display: block; object-fit: contain;">
             </div>
         </div>
     </div>
@@ -1419,6 +1415,7 @@
 </body>
 
 </html>
+
 
 
 
