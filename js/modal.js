@@ -2,6 +2,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const filterButtons = document.querySelectorAll('.filter-btn');
     const portfolioItems = document.querySelectorAll('.portfolio-item-wrapper');
+    
+    // --- Portfolio Filtering Logic ---
     filterButtons.forEach(button => {
         button.addEventListener('click', (event) => {
             const filter = event.target.dataset.filter;
@@ -30,6 +32,24 @@ document.addEventListener('DOMContentLoaded', () => {
     const modalBody = imageModalElement.querySelector('.modal-body'); 
     
     if (imageModalElement) {
+        
+        // --- NEW: Close modal when clicking outside the media ---
+        imageModalElement.addEventListener('click', (event) => {
+            // Check if the user clicked the modal backdrop, the dialog wrapper, 
+            // or the body itself (not the image or video)
+            if (event.target === imageModalElement || 
+                event.target === modalDialog || 
+                event.target === modalContent || 
+                event.target === modalBody) {
+                
+                const modalInstance = bootstrap.Modal.getInstance(imageModalElement);
+                if (modalInstance) {
+                    modalInstance.hide();
+                }
+            }
+        });
+
+        // --- Modal Content Injection Logic ---
         imageModalElement.addEventListener('show.bs.modal', (event) => {
             const button = event.relatedTarget;
             const portfolioItem = button.closest('.portfolio-item');
@@ -38,9 +58,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const imageSrc = button.getAttribute('data-image-src'); 
             const videoSrc = button.getAttribute('data-video-src'); 
             
-            const projectTitle = portfolioItem ? portfolioItem.querySelector('.work-title').textContent : 'Project Details';
             const workType = portfolioItem ? portfolioItem.querySelector('.work-type').textContent : '';
-            const category = portfolioItemWrapper ? portfolioItemWrapper.dataset.category : '';
 
             modalBody.innerHTML = '';
             
@@ -90,6 +108,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
+        // --- Modal Cleanup Logic ---
         imageModalElement.addEventListener('hidden.bs.modal', () => {
             modalBody.innerHTML = '';
             const closeButton = modalContent.querySelector('.close-button-overlay');
