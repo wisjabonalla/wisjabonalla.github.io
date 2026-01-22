@@ -1220,6 +1220,29 @@ footer{
     transform: translateY(0);
 }
 
+@keyframes modalThrob {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 rgba(0, 0, 0, 0);
+  }
+  50% {
+    transform: scale(1.015);
+    box-shadow: 0 0 30px rgba(0, 0, 0, 0.55);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 rgba(0, 0, 0, 0);
+  }
+}
+
+.modal-throb {
+  animation: modalThrob 3.5s ease-in-out infinite;
+}
+
+.modal-throb:hover,
+.modal-throb:focus-within {
+  animation-play-state: paused;
+}
 
 @media (max-width: 1400px) {
     .section-grid {
@@ -1399,6 +1422,7 @@ footer{
         font-size: .8rem;
     }
 }
+
 
 
 
