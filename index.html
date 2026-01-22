@@ -1604,6 +1604,47 @@
     </div>
 </footer>
 
+    <div class="modal fade" id="portfolioUpdateModal" tabindex="-1"
+     aria-labelledby="portfolioUpdateModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content bg-dark text-white rounded-6 modal-throb">
+
+      <div class="modal-header border-0 pb-0">
+        <h5 class="modal-title section-title-large my-0 text-accent-red" id="portfolioUpdateModalLabel">
+          Portfolio Update
+        </h5>
+        <button type="button" class="btn-close btn-close-white"
+                data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+
+      <div class="modal-body">
+        <p class="mb-4">
+          I’ve launched an updated version of my portfolio with my latest
+          projects and improvements.
+        </p>
+
+        <a href="https://wisjabonalla.vercel.app/"
+           target="_blank"
+           class="btn btn-danger w-100 rounded-0">
+          Visit Updated Portfolio <i class="fa-solid fa-arrow-up-right-from-square fa-xs"></i>
+        </a>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const modalEl = document.getElementById('portfolioUpdateModal');
+    const modal = new bootstrap.Modal(modalEl, {
+      backdrop: 'static', 
+      keyboard: true 
+    });
+    modal.show();
+  });
+</script>
+
 <script>
     document.getElementById('currentYear').textContent = new Date().getFullYear();
 </script>
@@ -1625,6 +1666,7 @@
 </body>
 
 </html>
+
 
 
 
